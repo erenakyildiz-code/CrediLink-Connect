@@ -38,7 +38,8 @@
   //if logintime is less than 5 minutes, then show the connection page
   //else show the login page, then route to connection page
   import { onMounted, ref } from 'vue';
-
+  import { useQuasar } from 'quasar';
+  const $q = useQuasar();
   const password = ref('');
 const isPwd = ref(true);
 
@@ -87,13 +88,9 @@ defineOptions({
 
 function closePopup() {
 }
-function sendPopupResponse() {
-    console.log("Sending response to browser");
-  // Simulate an error message to send
-  const errorMessage = "Simulated error occurred";
-
-  // Post the message with the error to the content script or other listeners
-  window.postMessage({ type: 'openPopupResponse', error: errorMessage }, '*');
+async function sendPopupResponse() {
+    console.log("logger")
+    await $q.bex.send('sendTestMessage');
 }
 </script>
 

@@ -1,103 +1,65 @@
 import { bexBackground } from 'quasar/wrappers'
 
-chrome.browserAction.onClicked.addListener((/* tab */) => {
-  // Opens our extension in a new browser window.
-  // Only if a popup isn't defined in the manifest.
+chrome.browserAction.onClicked.addListener(() => {
+  // Open the extension in a new browser window
   chrome.tabs.create({
     url: chrome.extension.getURL('www/index.html')
-  }, (/* newTab */) => {
-    // Tab opened.
-  })
-})
-export default bexBackground((bridge /* , allActiveConnections */) => {
-
-
-  
-  bridge.on('log', ({ data, respond }) => {
-    console.log(`[BEX] ${data.message}`, ...(data.data || []))
-    respond()
-  })
-
-  bridge.on('getTime', ({ respond }) => {
-    const currentTime = Date.now(); // Use a simple number for the current time
-    console.log('Sending current time from background script:', currentTime);
-    respond(currentTime); // Send a plain number instead of an object
   });
-  bridge.on('openConnectionPopup', ({ respond }) => {
-  console.log('Background script received openConnectionPopup message');
-
-  const url = chrome.runtime.getURL('www/index.html#/connection-popup');
-  chrome.windows.create(
-    {
-      url,
-      type: 'popup',
-      width: 400,
-      height: 600,
-    },
-    (newWindow) => {
-      if (chrome.runtime.lastError) {
-        console.error('Error opening popup:', chrome.runtime.lastError);
-
-        // Respond with a serializable error message
-        respond({ success: false, error: chrome.runtime.lastError.message });
-      } else {
-        console.log('Popup window created:', newWindow);
-
-        // Respond with simple serializable data
-        respond({ success: true });
-      }
-    }
-  );
 });
-  bridge.on('storage.get', ({ data, respond }) => {
-    const { key } = data
-    if (key === null) {
-      chrome.storage.local.get(null, items => {
-        // Group the values up into an array to take advantage of the bridge's chunk splitting.
-        respond(Object.values(items))
-      })
-    } else {
-      chrome.storage.local.get([key], items => {
-        respond(items[key])
-      })
-    }
-  })
-  // Usage:
-  // const { data } = await bridge.send('storage.get', { key: 'someKey' })
 
-  bridge.on('storage.set', ({ data, respond }) => {
-    chrome.storage.local.set({ [data.key]: data.value }, () => {
-      respond()
-    })
-  })
-  // Usage:
-  // await bridge.send('storage.set', { key: 'someKey', value: 'someValue' })
+export default bexBackground((bridge) => {
 
-  bridge.on('storage.remove', ({ data, respond }) => {
-    chrome.storage.local.remove(data.key, () => {
-      respond()
-    })
-  })
-  // Usage:
-  // await bridge.send('storage.remove', { key: 'someKey' })
+  // Handle log messages
+  bridge.on('log', ({ data, respond }) => {
+    console.log(`[BEX] ${data.message}`, ...(data.data || []));
+    respond();
+  });
+  bridge.on('sendTestMessage', (payload) => {
+    console.log("Received message with payload:", payload);
+    bridge.send('sendTestMessageResponse', { data: 'response' }, 'content-script');
+    respond();
+  });
+  // Respond with the current time
+  bridge.on('getTime', ({ respond }) => {
+    const currentTime = Date.now();  // Use a simple number for the current time
+    console.log('Sending current time from background script:', currentTime);
+    respond(currentTime);  // Send a plain number instead of an object
+  });
 
-  /*
-  // EXAMPLES
-  // Listen to a message from the client
-  bridge.on('test', d => {
-    console.log(d)
-  })
+  // Handle opening a connection popup
+  bridge.on('openConnectionPopup', ({ respond }) => {
+    console.log('Background script received openConnectionPopup message');
 
-  // Send a message to the client based on something happening.
-  chrome.tabs.onCreated.addListener(tab => {
-    bridge.send('browserTabCreated', { tab })
-  })
+    const url = chrome.runtime.getURL('www/index.html#/connection-popup');
+    chrome.windows.create(
+      {
+        url,
+        type: 'popup',
+        width: 400,
+        height: 600,
+      },
+      (newWindow) => {
+        if (chrome.runtime.lastError) {
+          console.error('Error opening popup:', chrome.runtime.lastError);
+          // Respond with an error message
+          respond({ success: false, error: chrome.runtime.lastError.message });
+        } else {
+          console.log('Popup window created:', newWindow);
+          // Respond with success
+          respond({ success: true });
+        }
+      }
+    );
+  });
 
-  // Send a message to the client based on something happening.
-  chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (changeInfo.url) {
-      bridge.send('browserTabUpdated', { tab, changeInfo })
-    }
-  })
-   */
-})
+  // Handle the "runFunctionInBackground" method
+  bridge.on('runFunctionInBackground', ({ data, respond }) => {
+    console.log('Received runFunctionInBackground request in background script with data:', data);
+
+    // Perform the background action
+    const result = { success: true, message: 'Function executed in background' };
+
+    // Send the response back to the content script
+    respond(result);
+  });
+});
