@@ -1,5 +1,15 @@
 <template>
-    <q-card style="min-width: 300px;">
+    <div class="connection-page" v-if="userLoggedIn">
+        <div class="q-pa-md">
+          <div class="text-center q-mb-lg">
+            <q-icon name="link" size="64px" color="primary" />
+            <h2 class="q-mt-md">Connection Page</h2>
+            <p>Welcome to the connection popup page!</p>
+          </div>
+          <q-btn color="primary" label="Close" @click="sendPopupResponse" class="full-width" />
+        </div>
+    </div>
+    <q-card style="min-width: 300px;" v-else>
         <q-card-section >
             <div class="text-h5">CrediLink Connect
             </div>
@@ -20,34 +30,19 @@
             color="primary"
             @click="login">
             </q-btn>
-            <q-space></q-space>
-            <q-btn label="Exit current wallet" color="primary" @click="exitWallet"></q-btn>
         </q-card-actions>
     </q-card>
-</template>
+  </template>
+  
+  <script setup>
+  //if logintime is less than 5 minutes, then show the connection page
+  //else show the login page, then route to connection page
+  import { onMounted, ref } from 'vue';
 
-<script setup>
-import {onMounted, ref} from 'vue';
-import { useQuasar } from 'quasar';
-import { useRouter } from 'vue-router';
-const router = useRouter();
-const $q = useQuasar();
-const password = ref('');
+  const password = ref('');
 const isPwd = ref(true);
 
-const exitWallet = ()=> {
-    
-        chrome.storage.local.remove('fixedMnemonic', function() {
-          });
-          chrome.storage.local.remove('password', function() {
-          });
-          chrome.storage.local.remove('mnemonic', function() {
-          });
-          chrome.storage.local.remove('WalletInfo', function() {
-          });
-          
-          router.push('/popup');
-}
+const userLoggedIn = ref(false);
 const login = ()=> {
     chrome.storage.local.get('password', function(result) {
         if(result.password === password.value){
@@ -58,10 +53,7 @@ const login = ()=> {
           chrome.storage.local.get('WalletInfo', function(result) {
             console.log(result);
             if(result.WalletInfo){
-                router.push('/home');
-            }
-            else{
-                router.push('/register');
+                userLoggedIn.value = true;
             }
           });
         }
@@ -75,7 +67,7 @@ const login = ()=> {
     })
 }
 onMounted(()=> {
-  chrome.storage.local.get('lastLoginTime', function(result) {
+    chrome.storage.local.get('lastLoginTime', function(result) {
     let lastLoginTime = result.lastLoginTime || 0;
     let currentTime = Date.now();
     let timeDifference = currentTime - lastLoginTime;
@@ -84,19 +76,31 @@ onMounted(()=> {
     let fiveMinutes = 5 * 60 * 1000;
 
     if (timeDifference <= fiveMinutes) {
-        // User has logged in within the last 5 minutes
-        chrome.storage.local.get('WalletInfo', function(result) {
-            console.log(result);
-            if(result.WalletInfo){
-                router.push('/home');
-            }
-            else{
-                router.push('/register');
-            }
-          });
-    } else {
-        // Prompt the user for their password
+        userLoggedIn.value = true;
     }
 });
-});
+    });
+  //defineOptions are already imported
+defineOptions({
+  name: 'ConnectionPage'
+})
+
+function closePopup() {
+}
+function sendPopupResponse() {
+    console.log("Sending response to browser");
+  // Simulate an error message to send
+  const errorMessage = "Simulated error occurred";
+
+  // Post the message with the error to the content script or other listeners
+  window.postMessage({ type: 'openPopupResponse', error: errorMessage }, '*');
+}
 </script>
+
+  
+  <style scoped>
+  .connection-page {
+    height: 100vh;
+  }
+  </style>
+  

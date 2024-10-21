@@ -20,6 +20,10 @@ const routes = [
   {path: '/checkMnemonic', component: () => import('pages/CheckMnemonic.vue')},
   {path: '/home', component: () => import('pages/HomePage.vue')},
   {
+    path: '/connection-popup',
+    component: () => import('pages/ConnectionPopup/ConnectionPage.vue')
+  },
+  {
     path: '/did/:did/verkey/:verkey',  // dynamic route with did and verkey as parameters
     component: () => import('pages/CredentialsPage.vue'),
     props: true // pass route params as props to the component

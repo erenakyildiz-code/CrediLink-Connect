@@ -9,17 +9,46 @@ chrome.browserAction.onClicked.addListener((/* tab */) => {
     // Tab opened.
   })
 })
-
 export default bexBackground((bridge /* , allActiveConnections */) => {
+
+
+  
   bridge.on('log', ({ data, respond }) => {
     console.log(`[BEX] ${data.message}`, ...(data.data || []))
     respond()
   })
 
   bridge.on('getTime', ({ respond }) => {
-    respond(Date.now())
-  })
+    const currentTime = Date.now(); // Use a simple number for the current time
+    console.log('Sending current time from background script:', currentTime);
+    respond(currentTime); // Send a plain number instead of an object
+  });
+  bridge.on('openConnectionPopup', ({ respond }) => {
+  console.log('Background script received openConnectionPopup message');
 
+  const url = chrome.runtime.getURL('www/index.html#/connection-popup');
+  chrome.windows.create(
+    {
+      url,
+      type: 'popup',
+      width: 400,
+      height: 600,
+    },
+    (newWindow) => {
+      if (chrome.runtime.lastError) {
+        console.error('Error opening popup:', chrome.runtime.lastError);
+
+        // Respond with a serializable error message
+        respond({ success: false, error: chrome.runtime.lastError.message });
+      } else {
+        console.log('Popup window created:', newWindow);
+
+        // Respond with simple serializable data
+        respond({ success: true });
+      }
+    }
+  );
+});
   bridge.on('storage.get', ({ data, respond }) => {
     const { key } = data
     if (key === null) {

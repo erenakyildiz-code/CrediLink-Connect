@@ -25,6 +25,9 @@ function getTokenFromStorage() {
           "Content-Type": "application/json", // Make sure to send JSON data
           "Authorization": `Bearer ${token}` // Add the JWT token to the headers
         },
+        body: JSON.stringify({
+          method:"key"
+        }),
         redirect: "follow",
       };
   

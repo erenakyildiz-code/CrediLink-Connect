@@ -4,23 +4,21 @@
             <q-card-section  v-if="walletInfoExists">
                 <div class="text-h5">CrediLink Connect
                 </div>
-                <div class="text-caption" v-if="userPublicDID == ''">You have not selected any public DID/verkey pair as primary DID/verkey pair.</div>
-                <div class="text-caption" v-else>Selected public DID/verkey pair as primary DID/verkey pair.</div>
+                <div class="text-caption" v-if="selectedDIDPair == ''">You have not selected any DID/verkey pair as primary DID/verkey pair.</div>
+                <div class="text-caption" v-else>You have a selected DID/Verkey pair.</div>
                     <q-scroll-area style="height: 300px;" class="q-my-sm">
                         <q-item dense clickable v-ripple class="q-my-sm"  style="border-radius: 10px; background-color: rgba(0, 0, 0, 0.1);" v-for="did in userDIDs" :key="did.did" @click="routeToCredentials(did.did,did.verkey)">
                             <q-item-section side>
-                                <q-radio dense v-model="userPublicDID" :val="did" checked-icon="task_alt" unchecked-icon="panorama_fish_eye" :disable="did.posture != 'posted'"/>
+                              <q-radio dense v-model="selectedDIDPair" :val="did.did" checked-icon="task_alt" unchecked-icon="panorama_fish_eye"/>
                             </q-item-section>
                             <q-item-section>
                             <!-- Shortened DID -->
                             <q-item-label>DID: {{ shorten(did.did) }}
                                 
-                                <q-btn dense flat icon="content_copy" size="xs" @click="copyToClipboard(did.did)" />
                             </q-item-label>
                             <!-- Shortened Verkey with copy button -->
                             <q-item-label caption>
                                 Verkey: {{ shorten(did.verkey) }}
-                                <q-btn dense flat icon="content_copy" size="xs" @click="copyToClipboard(did.verkey)" />
                             </q-item-label>
                             </q-item-section>
 
@@ -62,8 +60,8 @@ import getExistingDIDs from './Requests/DIDgenerationRequests/GetExistingDIDs';
 import { useRouter } from 'vue-router';
 
 const router = useRouter();
-const userPublicDID = ref('');
-const userPublicVerkey = ref('');
+
+const selectedDIDPair = ref('');
 const userDIDs = ref([]);
 const walletInfoExists = ref(false);
 
@@ -102,7 +100,12 @@ const generateNewDid = async ()=> {
 const getDids = async ()=> {
     var res = await getExistingDIDs();
     userDIDs.value = res.results;
-}
+    //add true,false to each did pair to show as selected. all will be false at first.
+    userDIDs.value.forEach(element => {
+        element.selected = false;
+    });
+  
+  }
 // Function to generate a public wallet name from the wallet key
 function getPublicWalletName(walletKey) {
   // Create a SHA-256 hash of the walletKey using crypto-js
@@ -147,7 +150,7 @@ onMounted(()=> {
                             "wallet_key": base58Key,
                             "wallet_key_derivation": "RAW",
                             "wallet_name": walletName,
-                            "wallet_type": "askar"});
+                            "wallet_type": "askar-anoncreds"});
                 //generated seed will be used in a request to Aca-py
                 var wallet_id = res.wallet_id;
                 var token = res.token;

@@ -4,6 +4,10 @@
   "browser_action": {
     "default_popup": "www/index.html#/popup"
   },
+
+  "background": {
+    "service_worker": "background.js"
+  },
   "options_page": "www/index.html#/",
   "icons": {
     "16": "icons/icon-16x16.png",

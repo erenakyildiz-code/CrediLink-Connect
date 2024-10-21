@@ -11,8 +11,9 @@
     "test": "echo \"No test specified\" && exit 0",
     "dev": "quasar dev",
     "build": "quasar build",
-    "dev_bex": "quasar dev -m bex"
-  },
+    "dev_bex": "quasar dev -m bex",
+    "build_bex": "quasar build -m bex"
+    },
   "dependencies": {
     "@quasar/extras": "^1.16.4",
     "@scure/bip39": "^1.4.0",
