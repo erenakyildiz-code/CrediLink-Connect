@@ -2,39 +2,30 @@
     <q-card style="min-width: 400px;">
         <q-card>
             <q-card-section  v-if="walletInfoExists">
-                <div class="text-h5">CrediLink Connect
-                </div>
-                <div class="text-caption" v-if="selectedDIDPair == ''">You have not selected any DID/verkey pair as primary DID/verkey pair.</div>
-                <div class="text-caption" v-else>You have a selected DID/Verkey pair.</div>
-                    <q-scroll-area style="height: 300px;" class="q-my-sm">
-                        <q-item dense clickable v-ripple class="q-my-sm"  style="border-radius: 10px; background-color: rgba(0, 0, 0, 0.1);" v-for="did in userDIDs" :key="did.did" @click="routeToCredentials(did.did,did.verkey)">
-                            <q-item-section side>
-                              <q-radio dense v-model="selectedDIDPair" :val="did.did" checked-icon="task_alt" unchecked-icon="panorama_fish_eye"/>
-                            </q-item-section>
-                            <q-item-section>
-                            <!-- Shortened DID -->
-                            <q-item-label>DID: {{ shorten(did.did) }}
-                                
-                            </q-item-label>
-                            <!-- Shortened Verkey with copy button -->
-                            <q-item-label caption>
-                                Verkey: {{ shorten(did.verkey) }}
-                            </q-item-label>
-                            </q-item-section>
+                <div class="text-h5">CrediLink Connect</div>
+                <div class="text-body2">Credentials in your wallet</div>
+                <q-expansion-item v-for="item in userCreds" :label=" getName(item.schema_id) " :caption="getVersion(item.schema_id)" :key="item">
 
-                            <q-item-section side top>
-                            <!-- Icon logic -->
-                            <q-icon class="q-mt-sm" size="1.3em" :color="did.posture == 'wallet_only' ? did.posture == 'posted' ? 'green' : 'red' : 'black'" :name="did.posture == 'wallet_only' ? did.posture == 'posted' ? 'public' : 'public_off' : 'unknown_document'">
-                                <q-tooltip style="font-size: xx-small;"> {{ did.posture == 'wallet_only' ? did.posture == 'posted' ? 'Published' : 'Wallet only' : 'Unknown' }} </q-tooltip>
+                  <q-card>
+          <q-card-section>
+            <div class="text-h6">Attributes</div>
+            <q-list>
+              <q-scroll-area style="height: 250px;">
+              <q-item v-for="(val,key) in item.attrs" :key="key">
+                <q-item-section>
+                  <q-item-label>{{ key }}</q-item-label>
+                </q-item-section>
+                <q-item-section side>
+                  <q-item-label>{{ val }}</q-item-label>
+                </q-item-section>
+              </q-item>
+                
+              </q-scroll-area>
+            </q-list>
+          </q-card-section>
+        </q-card>
+                </q-expansion-item>
 
-                            </q-icon>
-                            
-                        </q-item-section>
-                            
-                        </q-item>
-                    </q-scroll-area>
-                    
-                    <q-btn label="Generate New DID" color="primary" @click="generateNewDid"></q-btn>
                 </q-card-section>
                 <q-card-section v-else>
                 <div class="text-h5">CrediLink Connect
@@ -44,6 +35,9 @@
                     </div>
                 </q-card-section>
         </q-card>
+          <q-card-actions>
+            <q-btn label="Exit wallet" @click="exitWallet" color="primary"></q-btn>
+          </q-card-actions>
     </q-card>
 </template>
 
@@ -55,57 +49,33 @@ import generateNewWallet from './Requests/DIDgenerationRequests/GenerateNewWalle
 import bs58 from 'bs58';
 import { Buffer } from 'buffer';  // Import Buffer from the buffer package
 import CryptoJS from 'crypto-js'; // Use crypto-js for hashing
-import generateNewDID from './Requests/DIDgenerationRequests/GenerateNewDID';
-import getExistingDIDs from './Requests/DIDgenerationRequests/GetExistingDIDs';
 import { useRouter } from 'vue-router';
+import getCredentials from './Requests/CredentialIssuenceRequests/GetCredentials';
 
 const router = useRouter();
+const exitWallet = ()=> {
+    
+    chrome.storage.local.remove('fixedMnemonic', function() {
+      });
+      chrome.storage.local.remove('password', function() {
+      });
+      chrome.storage.local.remove('mnemonic', function() {
+      });
+      chrome.storage.local.remove('WalletInfo', function() {
+      });
+      
+      router.push('/popup');
+}
+const getName = (schemaID)=> {
+    return schemaID.split(':')[2];
+}
+const getVersion = (schemaID)=> {
+    return schemaID.split(':')[3];
+}
 
-const selectedDIDPair = ref('');
-const userDIDs = ref([]);
+const userCreds = ref([]);
 const walletInfoExists = ref(false);
 
-const routeToCredentials = (did,verkey) => {
-    router.push({
-    path: `/did/${did}/verkey/${verkey}`
-  });
-}
-
-const shorten = (text) => {
-  if (!text) return '';
-  return text.length > 10 ? `${text.slice(0, 6)}...${text.slice(-4)}` : text;
-};
-
-// Method to copy text to clipboard
-const copyToClipboard = (text) => {
-  navigator.clipboard.writeText(text).then(() => {
-    $q.notify({
-      type: 'positive',
-      message: 'Copied to clipboard!',
-      timeout: 1000
-    });
-  }).catch(() => {
-    $q.notify({
-      type: 'negative',
-      message: 'Failed to copy!',
-      timeout: 1000
-    });
-  });
-};
-
-const generateNewDid = async ()=> {
-    var res = await generateNewDID();
-    getDids();
-}
-const getDids = async ()=> {
-    var res = await getExistingDIDs();
-    userDIDs.value = res.results;
-    //add true,false to each did pair to show as selected. all will be false at first.
-    userDIDs.value.forEach(element => {
-        element.selected = false;
-    });
-  
-  }
 // Function to generate a public wallet name from the wallet key
 function getPublicWalletName(walletKey) {
   // Create a SHA-256 hash of the walletKey using crypto-js
@@ -132,7 +102,7 @@ const generateBase58Key = async (walletKey) => {
 
 onMounted(()=> {
     //if user has no DID set up generate one for them.
-    chrome.storage.local.get('WalletInfo', function(result) {
+    chrome.storage.local.get('WalletInfo', async function(result) {
         if(result.WalletInfo === undefined){
             //generate a new seed for DID creation using the mnemonic, the seed must be 32 chars long.
             chrome.storage.local.get('fixedMnemonic',async function(result) {
@@ -156,15 +126,19 @@ onMounted(()=> {
                 var token = res.token;
                 chrome.storage.local.set({WalletInfo: {token: token, wallet_id: wallet_id}});
                 walletInfoExists.value = true;
-                getDids();
             });
         }
         else{
             walletInfoExists.value = true;
-            getDids();
+            //get users credentials if user has a wallet
+            var res = await getCredentials();
+            userCreds.value = res.results;
+            console.log(res);
         }
 
     });
+
+
 });
 
 </script>

@@ -2,10 +2,22 @@ import { bexContent } from 'quasar/wrappers';
 
 export default bexContent((bridge) => {
   console.log('Content script initialized and listening for messages...');
-  bridge.on('sendTestMessageResponse', ({ data, respond }) => {
+  bridge.on('sendConnectionResponse', ({ data, respond }) => {
     console.log('Received in content script:', data);
     // Handle the data as needed
-    window.postMessage({ type: 'openPopupResponse', data: 'response' }, '*');
+    window.postMessage({ type: 'connectionResponse', data: data }, '*');
+    respond();
+  });
+  bridge.on('sendCredentialResponse', ({ data, respond }) => {
+    console.log('Received in content script:', data);
+    // Handle the data as needed
+    window.postMessage({ type: 'credentialFlowResponse', data: data }, '*');
+    respond();
+  });
+  bridge.on('sendProofResponse', ({ data, respond }) => {
+    console.log('Received in content script:', data);
+    // Handle the data as needed
+    window.postMessage({ type: 'proofFlowResponse', data: data }, '*');
     respond();
   });
   //listen to browser window messages
@@ -19,11 +31,11 @@ export default bexContent((bridge) => {
     // Handle "openPopup" message from the browser window
     if (event.data.type === 'openPopup') {
       // Send message to the background script
-      bridge.send('openConnectionPopup')
+      bridge.send('openConnectionPopup',data= event.data.data)
         .then((response) => {
           console.log('Received response from background:', response);
           // Forward the response from background script to the browser window
-          window.postMessage({ type: 'openPopupResponse', data: 'response' }, '*');
+          window.postMessage({ type: 'openPopupResponse', data: response.data }, '*');
         })
         .catch((error) => {
           console.error('Error opening popup:', error);
@@ -31,7 +43,35 @@ export default bexContent((bridge) => {
           window.postMessage({ type: 'openPopupResponse', error: error.message }, '*');
         });
     }
-
+    if (event.data.type === 'openPopupCredentialFlow') {
+      // Send message to the background script
+      bridge.send('openCredentialFlowPopup',data= event.data.data)
+        .then((response) => {
+          console.log('Received response from background:', response);
+          // Forward the response from background script to the browser window
+          window.postMessage({ type: 'openPopupResponse', data: response.data }, '*');
+        })
+        .catch((error) => {
+          console.error('Error opening popup:', error);
+          // Forward the error back to the browser window
+          window.postMessage({ type: 'openPopupResponse', error: error.message }, '*');
+        });
+    }
+    if (event.data.type === 'openPopupProofFlow') {
+      // Send message to the background script
+      console.log("received proof popup in content script");
+      bridge.send('openProofPopup',data= event.data.data)
+        .then((response) => {
+          console.log('Received response from background:', response);
+          // Forward the response from background script to the browser window
+          window.postMessage({ type: 'openPopupResponse', data: response.data }, '*');
+        })
+        .catch((error) => {
+          console.error('Error opening popup:', error);
+          // Forward the error back to the browser window
+          window.postMessage({ type: 'openPopupResponse', error: error.message }, '*');
+        });
+    }
     // Handle "getTime" message from the browser window
     if (event.data.type === 'getTime') {
       console.log('Received getTime request from the browser window.');

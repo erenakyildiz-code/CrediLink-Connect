@@ -3,13 +3,16 @@
         <div class="q-pa-md">
           <div class="text-center q-mb-lg">
             <q-icon name="link" size="64px" color="primary" />
-            <h2 class="q-mt-md">Connection Page</h2>
-            <p>Welcome to the connection popup page!</p>
+            <h2 class="q-mt-md">Connection Request</h2>
+            <p>{{ receivedInviteData.label }} from {{ receivedHost }} wants to connect to your wallet, do you accept ?</p>
           </div>
-          <q-btn color="primary" label="Close" @click="sendPopupResponse" class="full-width" />
+          <q-btn-group class="full-width">
+            <q-btn color="primary" label="Decline" @click="sendPopupResponse(false)" class="full-width" />
+            <q-btn color="primary" label="Accept" @click="sendPopupResponse(true)" class="full-width" />
+          </q-btn-group>
         </div>
     </div>
-    <q-card style="min-width: 300px;" v-else>
+    <q-card style="min-width: 300px; height: 100vh;" v-else>
         <q-card-section >
             <div class="text-h5">CrediLink Connect
             </div>
@@ -39,10 +42,12 @@
   //else show the login page, then route to connection page
   import { onMounted, ref } from 'vue';
   import { useQuasar } from 'quasar';
+  import receiveConnection from '../Requests/ConnectionRequests/ReceiveConnection';
   const $q = useQuasar();
   const password = ref('');
 const isPwd = ref(true);
-
+const receivedInviteData = ref({});
+const receivedHost = ref('');
 const userLoggedIn = ref(false);
 const login = ()=> {
     chrome.storage.local.get('password', function(result) {
@@ -68,6 +73,13 @@ const login = ()=> {
     })
 }
 onMounted(()=> {
+    chrome.storage.local.get('connectionData', function(result){
+        console.log(result);
+        var x = JSON.parse(result.connectionData);
+        receivedInviteData.value = x.invitation;
+        receivedHost.value = x.requesterUrl;
+
+    });
     chrome.storage.local.get('lastLoginTime', function(result) {
     let lastLoginTime = result.lastLoginTime || 0;
     let currentTime = Date.now();
@@ -88,9 +100,15 @@ defineOptions({
 
 function closePopup() {
 }
-async function sendPopupResponse() {
-    console.log("logger")
-    await $q.bex.send('sendTestMessage');
+async function sendPopupResponse(response) {
+    if(response){
+        var res = await receiveConnection(receivedInviteData.value);
+        console.log(res);
+        await $q.bex.send('sendConnectionResponse',response);
+    }
+    else {
+        await $q.bex.send('sendConnectionResponse',response);
+    }
 }
 </script>
 
