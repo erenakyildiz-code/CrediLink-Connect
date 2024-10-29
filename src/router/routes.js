@@ -31,6 +31,12 @@ const routes = [
     path: '/proof-popup',
     component: () => import('pages/ProofPopup/ProofPopup.vue')
   },
+  {path: '/connection-create',
+    component: ()=> import('pages/ConnectionPopup/ConnectionInitiationPage.vue')
+  },
+  {path: '/connection-receive-fully-out-of-band',
+    component: ()=> import('pages/ConnectionPopup/ConnectionPageFullyOutOfBand.vue')
+  },
   {
     path: '/did/:did/verkey/:verkey',  // dynamic route with did and verkey as parameters
     component: () => import('pages/CredentialsPage.vue'),

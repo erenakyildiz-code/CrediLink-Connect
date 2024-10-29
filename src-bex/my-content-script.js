@@ -8,6 +8,12 @@ export default bexContent((bridge) => {
     window.postMessage({ type: 'connectionResponse', data: data }, '*');
     respond();
   });
+  bridge.on('sendCreateConnectionResponse', ({ data, respond }) => {
+    console.log('Received in content script:', data);
+    // Handle the data as needed
+    window.postMessage({ type: 'sendCreateConnectionResponse', data: data }, '*');
+    respond();
+  });
   bridge.on('sendCredentialResponse', ({ data, respond }) => {
     console.log('Received in content script:', data);
     // Handle the data as needed
@@ -61,6 +67,36 @@ export default bexContent((bridge) => {
       // Send message to the background script
       console.log("received proof popup in content script");
       bridge.send('openProofPopup',data= event.data.data)
+        .then((response) => {
+          console.log('Received response from background:', response);
+          // Forward the response from background script to the browser window
+          window.postMessage({ type: 'openPopupResponse', data: response.data }, '*');
+        })
+        .catch((error) => {
+          console.error('Error opening popup:', error);
+          // Forward the error back to the browser window
+          window.postMessage({ type: 'openPopupResponse', error: error.message }, '*');
+        });
+    }
+    if (event.data.type === 'openReceiveConnection') {
+      // Send message to the background script
+      console.log("received proof popup in content script");
+      bridge.send('openReceiveConnectionPopup',data= event.data.data)
+        .then((response) => {
+          console.log('Received response from background:', response);
+          // Forward the response from background script to the browser window
+          window.postMessage({ type: 'openReceiveConnectionPopup', data: response.data }, '*');
+        })
+        .catch((error) => {
+          console.error('Error opening popup:', error);
+          // Forward the error back to the browser window
+          window.postMessage({ type: 'openReceiveConnectionPopup', error: error.message }, '*');
+        });
+    }
+    if (event.data.type === 'openCreateConnectionPopup') {
+      // Send message to the background script
+      console.log("received proof popup in content script");
+      bridge.send('openCreateConnectionPopup',data= event.data.data)
         .then((response) => {
           console.log('Received response from background:', response);
           // Forward the response from background script to the browser window

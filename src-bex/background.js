@@ -22,6 +22,15 @@ export default bexBackground((bridge) => {
       chrome.windows.remove(popupWindowID);
     })
   });
+  bridge.on('sendCreateConnectionResponse',async (payload) => {
+    console.log("Received message with payload:", payload);
+    bridge.send('sendCreateConnectionResponse', { data: payload }, 'content-script');
+    chrome.storage.local.get('popupWindowID', async (data) => {
+      console.log('Popup window ID:', data.popupWindowID);
+      const popupWindowID = data.popupWindowID;
+      chrome.windows.remove(popupWindowID);
+    })
+  });
   bridge.on('sendProofResponse',async (payload) => {
     console.log("Received message with payload:", payload);
     bridge.send('sendProofResponse', { data: payload }, 'content-script');
@@ -53,6 +62,58 @@ export default bexBackground((bridge) => {
     console.log('Data:', data);
     chrome.storage.local.set({ connectionData: data });
     const url = chrome.runtime.getURL('www/index.html#/connection-popup');
+    chrome.windows.create(
+      {
+        url,
+        type: 'popup',
+        width: 400,
+        height: 600,
+      },
+      (newWindow) => {
+        if (chrome.runtime.lastError) {
+          console.error('Error opening popup:', chrome.runtime.lastError);
+          // Respond with an error message
+          respond({ success: false, error: chrome.runtime.lastError.message });
+        } else {
+          console.log('Popup window created:', newWindow);
+          chrome.storage.local.set({ popupWindowID: newWindow.id });
+          // Respond with success
+          respond({ success: true });
+        }
+      }
+    );
+  });
+  bridge.on('openCreateConnectionPopup', ({ data, respond }) => {
+    console.log('Background script received openCreateConnectionPopup message');
+    console.log('Data:', data);
+    chrome.storage.local.set({ connDataUserValue: data });
+    const url = chrome.runtime.getURL('www/index.html#/connection-create');
+    chrome.windows.create(
+      {
+        url,
+        type: 'popup',
+        width: 400,
+        height: 600,
+      },
+      (newWindow) => {
+        if (chrome.runtime.lastError) {
+          console.error('Error opening popup:', chrome.runtime.lastError);
+          // Respond with an error message
+          respond({ success: false, error: chrome.runtime.lastError.message });
+        } else {
+          console.log('Popup window created:', newWindow);
+          chrome.storage.local.set({ popupWindowID: newWindow.id });
+          // Respond with success
+          respond({ success: true });
+        }
+      }
+    );
+  });
+  bridge.on('openReceiveConnectionPopup', ({ data, respond }) => {
+    console.log('Background script received openReceiveConnectionPopup message');
+    console.log('Data:', data);
+    chrome.storage.local.set({ connectionData: data });
+    const url = chrome.runtime.getURL('www/index.html#/connection-receive-fully-out-of-band');
     chrome.windows.create(
       {
         url,

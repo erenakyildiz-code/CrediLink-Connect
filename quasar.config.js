@@ -62,6 +62,7 @@ module.exports = configure(function (/* ctx */) {
       // analyze: true,
       env: {
         DB_URL: "http://localhost:8001",
+        DB_URL_CREDILINK : "http://localhost:3000"
       },
       // rawDefine: {}
       // ignorePublicFolder: true,
