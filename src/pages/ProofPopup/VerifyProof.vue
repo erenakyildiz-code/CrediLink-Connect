@@ -1,45 +1,13 @@
 <template>
     <div  v-if="userLoggedIn">
-        <div class="q-pa-md">
-          <div class="text-center q-mb-lg">
-            <q-icon name="find_in_page" size="64px" color="primary" />
-            <h2 class="q-mt-md">Create a Proof Request</h2>
-            <p> Create a proof request with the following attributes/predicates</p>
-            <q-list> 
-  <q-item class="q-ma-sm" v-for="attrib in proofReq.requested_attributes" :key="attrib.name" style="border-radius: 10px; background-color: rgba(0, 0, 0, 0.1);">
-    <q-item-section>
-        
-    <!-- Display the name field -->
-    <!-- Display the Credential Definition Name -->
-     
-    <q-item-label>
-        {{ attrib.name }}: {{ attrib.restrictions[0]['attr::' + attrib.name + '::value'] }}
-    </q-item-label>
-    <!-- Display the attr::nameOfField::value field -->
-    
-</q-item-section>
-  </q-item>
-</q-list>
-
-<q-list>
-  <q-item class="q-ma-sm" v-for="predicate in proofReq.requested_predicates" :key="predicate.name" style="border-radius: 10px; background-color: rgba(0, 0, 0, 0.1);">
-    <q-item-section>
-
-   
-    <!-- Display the name -->
-    <q-item-label>{{ predicate.name }}  {{ predicate.p_type }} {{ predicate.p_value }}</q-item-label>
-        
-    
-    <!-- Display the restriction (DigitalDiploma part) -->
-</q-item-section>
-  </q-item>
-</q-list>
+        <q-card style="height: 100vh;">
+            <div class="text-center q-mb-lg">
+            <q-icon name="verified" size="64px" color="primary" />
+            <h2 class="q-mt-md">Proof received</h2>
+            <p>You can verify the proof by clicking the button below.</p>
           </div>
-          <q-btn-group class="full-width">
-            <q-btn color="primary" label="Decline" @click="sendPopupResponse(false)" class="full-width" />
-            <q-btn color="primary" label="Accept" @click="sendPopupResponse(true)" class="full-width" />
-          </q-btn-group>
-        </div>
+          <q-btn class="full-width gradient-background" style="" label="Verify" @click="sendPopupResponse()" />
+          </q-card>
     </div>
     <q-card style="min-width: 300px; height: 100vh;" v-else>
         <q-card-section >
@@ -71,16 +39,18 @@
   //else show the login page, then route to connection page
   import { onMounted, ref } from 'vue';
   import { useQuasar } from 'quasar';
-  import createProofRequest from '../Requests/ProofRequests/createProofRequest';
+import verifyProof from '../Requests/ProofRequests/verifyProof';
+import JSConfetti from 'js-confetti';
+const jsConfetti = new JSConfetti()
   const $q = useQuasar();
   const password = ref('');
-  const proofReq = ref();
-  const jobId = ref();
-  const userId = ref();
-  const isPwd = ref(true);
-  const inviMsgId = ref();
-  const userLoggedIn = ref(false);
-  const login = ()=> {
+const isPwd = ref(true);
+const userLoggedIn = ref(false);
+const inviMsgId = ref();
+const jobId = ref();
+const userId = ref();
+
+const login = ()=> {
     chrome.storage.local.get('password', function(result) {
         if(result.password === password.value){
           let currentTime = Date.now(); // Current time in milliseconds
@@ -107,16 +77,12 @@
 
 
 onMounted(async ()=> {
-    chrome.storage.local.get('openCreateProofRequest', function(result){
-        var data = JSON.parse(result.openCreateProofRequest);
-        //set jobId userId and proofReq
+    //first fetch all credentials from wallet.
+    chrome.storage.local.get('verificationData', function(result){
+        var data = JSON.parse(result.verificationData);
+        inviMsgId.value = data.inviMsgIdRequester;
         jobId.value = data.jobId;
         userId.value = data.userId;
-        proofReq.value = data.proofRequest;
-        inviMsgId.value = data.inviMsgIdRequester;
-        console.log(data);
-
-
     });
     chrome.storage.local.get('lastLoginTime', function(result) {
     let lastLoginTime = result.lastLoginTime || 0;
@@ -136,17 +102,30 @@ defineOptions({
   name: 'ConnectionPage'
 })
 
-async function sendPopupResponse(response) {
-    if(response){
-        //res is true, this means user wants to create proof request. generate the proof request.
-
-       
-        var res = await createProofRequest(proofReq.value,inviMsgId.value,userId.value,jobId.value);
-        
-        await $q.bex.send('sendCreateProofRequestResponse',response);
+async function sendPopupResponse() {
+    //using inviMsgId
+    var response = await verifyProof(inviMsgId.value);
+    console.log(response);
+    if(response.verified){
+        $q.notify({
+            type: 'positive',
+            message: 'Proof verified!',
+            timeout: 1000
+          });
+          jsConfetti.addConfetti({
+   emojis: ['🌈', '⚡️', '💥', '✨', '💫', '🌸'],
+})
+//wait for 2 second so that the users can see the confetti
+await new Promise(r => setTimeout(r, 2000));
+await $q.bex.send('sendProofVerificationResponse',response.verified);
     }
-    else {
-        await $q.bex.send('sendCreateProofRequestResponse',response);
+    else{
+        $q.notify({
+            type: 'negative',
+            message: 'Proof not verified!',
+            timeout: 1000
+          });
+          await $q.bex.send('sendProofVerificationResponse',response.verified);
     }
     chrome.windows.getCurrent(function(windowInfo) {
             chrome.windows.remove(windowInfo.id);
@@ -160,5 +139,22 @@ async function sendPopupResponse(response) {
   .connection-page {
     height: 100vh;
   }
+  .gradient-background {
+  background: linear-gradient(123deg,#db7a0e,#152bc7,#d16691);
+  background-size: 180% 180%;
+  animation: gradient-animation 3s ease infinite;
+}
+
+@keyframes gradient-animation {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
   </style>
   

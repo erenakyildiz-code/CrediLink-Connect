@@ -1,10 +1,10 @@
 <template>
     <div  v-if="userLoggedIn">
         <q-card style="height: 100vh;">
-            <q-card-section class="row">
-                <q-icon color="primary" name="fact_check" size="32px"></q-icon>
-                <div class="text-h5">Proof requested</div>
-            </q-card-section>
+            <div class="text-center q-mb-lg">
+            <q-icon name="fact_check" size="64px" color="primary" />
+            <h2 class="q-mt-md">Proof requested</h2>
+          </div>
             <q-card-section>
                 <q-scroll-area style="height: 250px;">
 
@@ -28,12 +28,19 @@
 </q-list>
 <div class="text-body2">Predicated values :</div>
 <q-list>
-<q-item v-for="attrib in proofReq.by_format.pres_request.indy.requested_predicates" :key="attrib.name">
-<q-item-section>
+    <q-item v-for="attrib in predicateMapper" :key="attrib.name">
+    
+    <q-item-section avatar>
+          <q-icon color="green" name="check" v-if="attrib.fulfills" ><q-tooltip>Predicate holds true !</q-tooltip></q-icon>
+          <q-icon color="negative" name="clear" v-else ><q-tooltip>No valid credential found with expected value</q-tooltip></q-icon>
+        </q-item-section>
+        <q-item-section>
+    <q-item-label overline>{{ attrib.schemaName.split(":")[2] }}</q-item-label>
     <q-item-label>{{ attrib.name }}</q-item-label>
 </q-item-section>
 <q-item-section side>
-    <q-item-label>{{ attrib.name }}</q-item-label>
+    <q-item-label >{{ attrib.expectedValue }}<q-tooltip>Expected value</q-tooltip></q-item-label>
+    <q-item-label >{{ attrib.value }}<q-tooltip>Value in wallet</q-tooltip></q-item-label>
 </q-item-section>
 </q-item>
 </q-list>
@@ -81,15 +88,17 @@
   //else show the login page, then route to connection page
   import { onMounted, ref } from 'vue';
   import { useQuasar } from 'quasar';
-  import generateProof from '../Requests/ProofRequests/generateProof';
+  import generateProof from '../Requests/ProofRequests/generateProofFullyOutOfBand';
 import getCredentials from '../Requests/CredentialIssuenceRequests/GetCredentials';
+import getConnIdFromInviMsgId from '../Requests/ProofRequests/getConnIdFromInviMsgId';
+import getProofRequestFromConnId from '../Requests/ProofRequests/getProofRequestFromConnId';
   const $q = useQuasar();
   const password = ref('');
-  const attributes = ref([]);
+  const jobId = ref();
+  const userId = ref();
+  const inviMsgId = ref();
   const proofReq = ref();
-  const selectedDIDPair = ref();
   const walletCredentials = ref();
-  const step = ref(1);
 const isPwd = ref(true);
 const attribMapper = ref([]);
 const predicateMapper = ref([]);
@@ -118,12 +127,24 @@ const login = ()=> {
     })
 }
 // Function to check if a result satisfies the restrictions
-function checkAttribRestrictions() {
+async function checkAttribRestrictions() {
     // Initialize attribMapper as an array to store mapping results
+    
+    var connection = await getConnIdFromInviMsgId(inviMsgId.value);
+    var conn = connection.results[0];
+      if(conn == null || conn.state != "active") {
+        throw new Error('Connection not established, connect flow must be completed first.');
+      }
+    var connId = conn.connection_id;
+    localStorage.setItem("connectionId",conn.connection_id);
+    //from connId get proofrequest
 
+    var proofRequest = await getProofRequestFromConnId(connId);
+
+    proofReq.value = proofRequest.results[0];
     // Get the requested attributes from proofReq
     const requestedAttributes = proofReq.value.by_format.pres_request.indy.requested_attributes;
-
+    const requestedPredicates = proofReq.value.by_format.pres_request.indy.requested_predicates;
     // Loop through the requested attributes
     for (const [attrReferent, attrInfo] of Object.entries(requestedAttributes)) {
         // attrReferent is the attribute key (e.g., 'ssn')
@@ -180,7 +201,147 @@ function checkAttribRestrictions() {
             }
         }
     }
+    console.log("wallet creds", walletCredentials.value.results)
+    console.log("requestedPreds", requestedPredicates)
+    for (const [attrReferent, attrInfo] of Object.entries(requestedPredicates)) {
+        // attrReferent is the attribute key (e.g., 'ssn')
+        // attrInfo contains 'name' and 'restrictions'
 
+        // Get the attribute name (e.g., 'ssn')
+        const attrName = attrInfo.name;
+
+        // Get the restrictions array
+        const restrictions = attrInfo.restrictions || [];
+
+        const p_type = attrInfo.p_type;
+        const p_value = attrInfo.p_value;
+        const creds = walletCredentials.value.results;
+
+
+        //from creds, find the credDefId matching credential within restrictions array (only one restriction is required)
+        var foundCred = false;
+        for (const item of restrictions){
+            for(const cred of creds){
+                if(item['cred_def_id'] == cred['cred_def_id']){
+                    foundCred = true;
+                    //check if the predicate is fulfilled
+                    if(p_type == '>='){
+                        console.log(cred);
+                        if(cred['attrs'][attrName] >= p_value){
+                            predicateMapper.value.push({
+                                name: attrName,
+                                value: cred.attrs[attrName],
+                                expectedValue: p_type + p_value,
+                                referent: cred.referent,
+                                schemaName: cred.schema_id,
+                                fulfills: true
+                            });
+                        }
+                        else{
+                            predicateMapper.value.push({
+                                name: attrName,
+                                value: cred.attrs[attrName],
+                                expectedValue: p_type + p_value,
+                                referent: cred.referent,
+                                schemaName: cred.schema_id,
+                                fulfills: false
+                            });
+                        }
+                    }
+                    else if(p_type == '>'){
+                        if(cred['attrs'][attrName] > p_value){
+                            predicateMapper.value.push({
+                                name: attrName,
+                                value: cred.attrs[attrName],
+                                expectedValue: p_type + p_value,
+                                referent: cred.referent,
+                                schemaName: cred.schema_id,
+                                fulfills: true
+                            });
+                        }
+                        else{
+                            predicateMapper.value.push({
+                                name: attrName,
+                                value: cred.attrs[attrName],
+                                expectedValue: p_type + p_value,
+                                referent: cred.referent,
+                                schemaName: cred.schema_id,
+                                fulfills: false
+                            });
+                        }
+
+                    }
+                    else if(p_type == '<='){
+                        //same
+                        if(cred['attrs'][attrName] <= p_value){
+                            predicateMapper.value.push({
+                                name: attrName,
+                                value: cred.attrs[attrName],
+                                expectedValue: p_type + p_value,
+                                referent: cred.referent,
+                                schemaName: cred.schema_id,
+                                fulfills: true
+                            });
+                        }
+                        else{
+                            predicateMapper.value.push({
+                                name: attrName,
+                                value: cred.attrs[attrName],
+                                expectedValue: p_type + p_value,
+                                referent: cred.referent,
+                                schemaName: cred.schema_id,
+                                fulfills: false
+                            });
+                        }
+                    }
+                    else if(p_type == '<'){
+                        //same
+                        if(cred['attrs'][attrName] < p_value){
+                            predicateMapper.value.push({
+                                name: attrName,
+                                value: cred.attrs[attrName],
+                                expectedValue: p_type + p_value,
+                                referent: cred.referent,
+                                schemaName: cred.schema_id,
+                                fulfills: true
+                            });
+                        }
+                        else{
+                            predicateMapper.value.push({
+                                name: attrName,
+                                value: cred.attrs[attrName],
+                                expectedValue: p_type + p_value,
+                                referent: cred.referent,
+                                schemaName: cred.schema_id,
+                                fulfills: false
+                            });
+                        }
+                    }
+
+                    break;
+                }
+            }
+            if(foundCred){
+                break;
+            }
+
+
+        }
+
+        //check fulfilments 
+
+
+        /*
+        predicateMapper.value.push({
+                        name: attrName,
+                        value: cred.attrs[attrName],
+                        expectedValue: p_type + p_value,
+                        referent: cred.referent,
+                        schemaName: cred.schema_id,
+                        fulfills: fulfills
+                    });
+                    */
+    }
     // Return the mapping results
     return attribMapper;
 }
@@ -189,9 +350,13 @@ function checkAttribRestrictions() {
 onMounted(async ()=> {
     //first fetch all credentials from wallet.
     walletCredentials.value = await getCredentials();
-    chrome.storage.local.get('proofData', function(result){
-        proofReq.value = JSON.parse(result.proofData);
-        console.log(proofReq.value, walletCredentials.value);
+    chrome.storage.local.get('proofDataFullyOutOfBand', function(result){
+        var data = JSON.parse(result.proofDataFullyOutOfBand);
+        inviMsgId.value = data.inviMsgIdRequestee;
+        jobId.value = data.jobId;
+        userId.value = data.userId;
+
+
         checkAttribRestrictions();
 
     });
@@ -227,19 +392,25 @@ attribMapper.value.forEach(item => {
     revealed: true
   };
 });
+let predicates = {};
+predicateMapper.value.forEach(item => {
+    predicates[item.name] = {
+        cred_id: item.referent
+    };
+});
 
         var res = await generateProof(
             {
                 "attributes": attributes,
-                "predicates": {},
+                "predicates": predicates,
                 "selfAttested": {},
-            }
+            },jobId.value,userId.value
         );
         console.log(res);
-        await $q.bex.send('sendProofResponse',response);
+        await $q.bex.send('sendPresResponse',response);
     }
     else {
-        await $q.bex.send('sendProofResponse',response);
+        await $q.bex.send('sendPresResponse',response);
     }
     chrome.windows.getCurrent(function(windowInfo) {
             chrome.windows.remove(windowInfo.id);

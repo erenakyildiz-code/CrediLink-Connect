@@ -37,6 +37,19 @@ const routes = [
   {path: '/connection-receive-fully-out-of-band',
     component: ()=> import('pages/ConnectionPopup/ConnectionPageFullyOutOfBand.vue')
   },
+
+  {
+    path: '/create-proof-request-OOB',
+    component: ()=> import('pages/ProofPopup/CreateProofRequestFullyOutOfBand.vue')
+  },
+  {
+    path: '/receive-proof-request-OOB',
+    component: ()=> import('pages/ProofPopup/ProofPresentationFullyOutOfBand.vue')
+  },
+  {
+    path: '/verify-proof-request-OOB',
+    component: ()=> import('pages/ProofPopup/VerifyProof.vue')
+  },
   {
     path: '/did/:did/verkey/:verkey',  // dynamic route with did and verkey as parameters
     component: () => import('pages/CredentialsPage.vue'),

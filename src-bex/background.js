@@ -13,6 +13,24 @@ export default bexBackground((bridge) => {
     console.log(`[BEX] ${data.message}`, ...(data.data || []));
     respond();
   });
+  bridge.on('sendPresResponse',async (payload) => {
+    console.log("Received message with payload:", payload);
+    bridge.send('sendPresResponse', { data: payload }, 'content-script');
+    chrome.storage.local.get('popupWindowID', async (data) => {
+      console.log('Popup window ID:', data.popupWindowID);
+      const popupWindowID = data.popupWindowID;
+      chrome.windows.remove(popupWindowID);
+    })
+  });
+  bridge.on('sendCreateProofRequestResponse',async (payload) => {
+    console.log("Received message with payload:", payload);
+    bridge.send('sendCreateProofRequestResponse', { data: payload }, 'content-script');
+    chrome.storage.local.get('popupWindowID', async (data) => {
+      console.log('Popup window ID:', data.popupWindowID);
+      const popupWindowID = data.popupWindowID;
+      chrome.windows.remove(popupWindowID);
+    })
+  });
   bridge.on('sendConnectionResponse',async (payload) => {
     console.log("Received message with payload:", payload);
     bridge.send('sendConnectionResponse', { data: payload }, 'content-script');
@@ -43,6 +61,15 @@ export default bexBackground((bridge) => {
   bridge.on('sendCredentialResponse',async (payload) => {
     console.log("Received message with payload:", payload);
     bridge.send('sendCredentialResponse', { data: payload }, 'content-script');
+    chrome.storage.local.get('popupWindowID', async (data) => {
+      console.log('Popup window ID:', data.popupWindowID);
+      const popupWindowID = data.popupWindowID;
+      chrome.windows.remove(popupWindowID);
+    })
+  });
+  bridge.on('sendProofVerificationResponse',async (payload) => {
+    console.log("Received message with payload:", payload);
+    bridge.send('verifyProofResponse', { data: payload }, 'content-script');
     chrome.storage.local.get('popupWindowID', async (data) => {
       console.log('Popup window ID:', data.popupWindowID);
       const popupWindowID = data.popupWindowID;
@@ -109,6 +136,7 @@ export default bexBackground((bridge) => {
       }
     );
   });
+  
   bridge.on('openReceiveConnectionPopup', ({ data, respond }) => {
     console.log('Background script received openReceiveConnectionPopup message');
     console.log('Data:', data);
@@ -166,6 +194,84 @@ export default bexBackground((bridge) => {
     console.log('Data:', data);
     chrome.storage.local.set({ proofData: data });
     const url = chrome.runtime.getURL('www/index.html#/proof-popup');
+    chrome.windows.create(
+      {
+        url,
+        type: 'popup',
+        width: 400,
+        height: 600,
+      },
+      (newWindow) => {
+        if (chrome.runtime.lastError) {
+          console.error('Error opening popup:', chrome.runtime.lastError);
+          // Respond with an error message
+          respond({ success: false, error: chrome.runtime.lastError.message });
+        } else {
+          console.log('Popup window created:', newWindow);
+          chrome.storage.local.set({ popupWindowID: newWindow.id });
+          // Respond with success
+          respond({ success: true });
+        }
+      }
+    );
+  });
+  bridge.on('openCreateProofRequest', ({ data, respond }) => {
+    console.log('Background script received openConnectionPopup message');
+    console.log('Data:', data);
+    chrome.storage.local.set({ openCreateProofRequest: data });
+    const url = chrome.runtime.getURL('www/index.html#/create-proof-request-OOB');
+    chrome.windows.create(
+      {
+        url,
+        type: 'popup',
+        width: 400,
+        height: 600,
+      },
+      (newWindow) => {
+        if (chrome.runtime.lastError) {
+          console.error('Error opening popup:', chrome.runtime.lastError);
+          // Respond with an error message
+          respond({ success: false, error: chrome.runtime.lastError.message });
+        } else {
+          console.log('Popup window created:', newWindow);
+          chrome.storage.local.set({ popupWindowID: newWindow.id });
+          // Respond with success
+          respond({ success: true });
+        }
+      }
+    );
+  });
+  bridge.on('openProofPresentation', ({ data, respond }) => {
+    console.log('Background script received openConnectionPopup message');
+    console.log('Data:', data);
+    chrome.storage.local.set({ proofDataFullyOutOfBand: data });
+    const url = chrome.runtime.getURL('www/index.html#/receive-proof-request-OOB');
+    chrome.windows.create(
+      {
+        url,
+        type: 'popup',
+        width: 400,
+        height: 600,
+      },
+      (newWindow) => {
+        if (chrome.runtime.lastError) {
+          console.error('Error opening popup:', chrome.runtime.lastError);
+          // Respond with an error message
+          respond({ success: false, error: chrome.runtime.lastError.message });
+        } else {
+          console.log('Popup window created:', newWindow);
+          chrome.storage.local.set({ popupWindowID: newWindow.id });
+          // Respond with success
+          respond({ success: true });
+        }
+      }
+    );
+  });
+  bridge.on('openVerifyProof', ({ data, respond }) => {
+    console.log('Background script received openConnectionPopup message');
+    console.log('Data:', data);
+    chrome.storage.local.set({ verificationData: data });
+    const url = chrome.runtime.getURL('www/index.html#/verify-proof-request-OOB');
     chrome.windows.create(
       {
         url,

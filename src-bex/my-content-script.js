@@ -26,6 +26,19 @@ export default bexContent((bridge) => {
     window.postMessage({ type: 'proofFlowResponse', data: data }, '*');
     respond();
   });
+  
+  bridge.on('sendCreateProofRequestResponse', ({ data, respond }) => {
+    console.log('Received in content script:', data);
+    // Handle the data as needed
+    window.postMessage({ type: 'createProofRequestResponse', data: data }, '*');
+    respond();
+  });
+  bridge.on('sendPresResponse', ({ data, respond }) => {
+    console.log('Received in content script:', data);
+    // Handle the data as needed
+    window.postMessage({ type: 'proofPresentationResponse', data: data }, '*');
+    respond();
+  });
   //listen to browser window messages
   window.addEventListener('message', (event) => {
     if (event.source !== window || !event.data || typeof event.data.type !== 'string') {
@@ -97,6 +110,51 @@ export default bexContent((bridge) => {
       // Send message to the background script
       console.log("received proof popup in content script");
       bridge.send('openCreateConnectionPopup',data= event.data.data)
+        .then((response) => {
+          console.log('Received response from background:', response);
+          // Forward the response from background script to the browser window
+          window.postMessage({ type: 'openPopupResponse', data: response.data }, '*');
+        })
+        .catch((error) => {
+          console.error('Error opening popup:', error);
+          // Forward the error back to the browser window
+          window.postMessage({ type: 'openPopupResponse', error: error.message }, '*');
+        });
+    }
+    if (event.data.type === 'openCreateProofRequest') {
+      // Send message to the background script
+      console.log("received proof popup in content script");
+      bridge.send('openCreateProofRequest',data= event.data.data)
+        .then((response) => {
+          console.log('Received response from background:', response);
+          // Forward the response from background script to the browser window
+          window.postMessage({ type: 'openPopupResponse', data: response.data }, '*');
+        })
+        .catch((error) => {
+          console.error('Error opening popup:', error);
+          // Forward the error back to the browser window
+          window.postMessage({ type: 'openPopupResponse', error: error.message }, '*');
+        });
+    }
+    if (event.data.type === 'openProofPresentation') {
+      // Send message to the background script
+      console.log("received proof popup in content script");
+      bridge.send('openProofPresentation',data= event.data.data)
+        .then((response) => {
+          console.log('Received response from background:', response);
+          // Forward the response from background script to the browser window
+          window.postMessage({ type: 'openPopupResponse', data: response.data }, '*');
+        })
+        .catch((error) => {
+          console.error('Error opening popup:', error);
+          // Forward the error back to the browser window
+          window.postMessage({ type: 'openPopupResponse', error: error.message }, '*');
+        });
+    }
+    if (event.data.type === 'openVerifyProof') {
+      // Send message to the background script
+      console.log("received proof popup in content script");
+      bridge.send('openVerifyProof',data= event.data.data)
         .then((response) => {
           console.log('Received response from background:', response);
           // Forward the response from background script to the browser window

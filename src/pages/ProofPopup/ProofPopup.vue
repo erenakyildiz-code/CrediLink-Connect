@@ -1,10 +1,10 @@
 <template>
     <div  v-if="userLoggedIn">
         <q-card style="height: 100vh;">
-            <q-card-section class="row">
-                <q-icon color="primary" name="fact_check" size="32px"></q-icon>
-                <div class="text-h5">Proof requested</div>
-            </q-card-section>
+            <div class="text-center q-mb-lg">
+            <q-icon name="fact_check" size="64px" color="primary" />
+            <h2 class="q-mt-md">Proof requested</h2>
+          </div>
             <q-card-section>
                 <q-scroll-area style="height: 250px;">
 
