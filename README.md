@@ -10,4 +10,15 @@ With this browser extension you can:
 - Use VC's on CrediLink website
 
 ## Usage
-Watch the following youtube video for configuring and running the project at home.
+
+```
+npm i
+npm run dev_bex
+```
+Then load unpacked into a chromium based browser
+
+You need somethings running on the background, such as aca-py and indy-node's.
+
+Watch the long demo:
+
+https://www.youtube.com/watch?v=6s8yih1awUA
