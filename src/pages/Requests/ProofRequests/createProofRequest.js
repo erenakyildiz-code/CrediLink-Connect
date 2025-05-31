@@ -14,7 +14,7 @@ import getConnIdFromInviMsgId from "./getConnIdFromInviMsgId";
       });
     });
   }
-  
+
   export default async function createProofRequest(properties,inviMsgId,userId,jobId) {
 
     if(inviMsgId == null) {
@@ -33,14 +33,14 @@ import getConnIdFromInviMsgId from "./getConnIdFromInviMsgId";
 
         //get all credDefs of the schemaIds.
 
-      
+
       var requestObject = {
         "auto_remove": true,
         "auto_verify": false,
         "comment": "string",
         "connection_id": conn.connection_id,
         "presentation_request": {
-            "indy": {
+            "anoncreds": {
                 "name": "Proof request",
                 "nonce": "1",
                 "requested_attributes": properties.requested_attributes,
@@ -50,13 +50,13 @@ import getConnIdFromInviMsgId from "./getConnIdFromInviMsgId";
         },
         "trace": false
       }
-    
+
       console.log(requestObject);
       //send request to aca-py
-    
+
       var token = await getTokenFromStorage();
       //path = /present-proof-2.0/send-request
-    
+
       const requestOptions = {
         method: "POST",
         headers: {
@@ -67,13 +67,13 @@ import getConnIdFromInviMsgId from "./getConnIdFromInviMsgId";
         body: JSON.stringify(requestObject),
         redirect: "follow",
       };
-    
+
       var res = await fetch(process.env.DB_URL + "/present-proof-2.0/send-request", requestOptions);
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);
       }
       res = await res.json();
-      
+
       const putReqOptions = {
         method: "PUT",
         headers: {
@@ -85,7 +85,7 @@ import getConnIdFromInviMsgId from "./getConnIdFromInviMsgId";
       }
 
       var res = await fetch(process.env.DB_URL_CREDILINK + '/proofRequestSent', putReqOptions);
-      
+
       res = await res.json();
       if(res.status != '200'){
         throw new Error(`HTTP error! status: ${res.status}`);
@@ -94,4 +94,3 @@ import getConnIdFromInviMsgId from "./getConnIdFromInviMsgId";
 
       return true;
   }
-  

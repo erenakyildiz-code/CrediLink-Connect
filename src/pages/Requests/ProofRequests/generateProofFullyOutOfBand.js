@@ -11,7 +11,7 @@ function getTokenFromStorage() {
       });
     });
   }
-  
+
   export default async function generateProof(properties,jobId,userId) {
 
 
@@ -31,11 +31,11 @@ function getTokenFromStorage() {
     var presExId = await fetch(process.env.DB_URL + "/present-proof-2.0/records?connection_id=" + connId, getRequestOptions);
     presExId = await presExId.json();
     presExId = presExId.results[0].pres_ex_id;
-    var requestBody = 
+    var requestBody =
     {
         "auto_remove": true,
-        
-  "indy": {
+
+  "anoncreds": {
     "requested_attributes": properties.attributes,
     "requested_predicates": properties.predicates,
     "self_attested_attributes": properties.selfAttested,
@@ -44,7 +44,7 @@ function getTokenFromStorage() {
   "trace": false
 }
     try {
-       
+
         var postRequestOptions = {
           method: "POST",
           headers: {
@@ -62,7 +62,7 @@ function getTokenFromStorage() {
             throw new Error(`HTTP error! status: ${responseOfStore.status}`);
           }
         var response = await credentialsRes.json();
-      
+
           console.log(response);
           //send server new state response.
             const putReqOptions = {
@@ -79,7 +79,7 @@ function getTokenFromStorage() {
             if(res.status != '200'){
                 throw new Error(`HTTP error! status: ${res.status}`);
             }
-            
+
 
       return response; // Return the parsed JSON result
     } catch (error) {
@@ -87,4 +87,3 @@ function getTokenFromStorage() {
       throw error; // Re-throw the error so it can be caught elsewhere if needed
     }
   }
-  
